@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TumTum</title>
+<style>
+:root{
+  --bg:#1a1a1c;--surface:#222226;--surface2:#2a2a2f;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
+  --text:#d8d8d8;--text2:#606068;--step-on:#d8d8d8;
+  --btn-bg:#2a2a2f;--btn-hover:#333338;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:monospace;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:flex-start;padding:28px 16px 60px;}
+#wrap{width:100%;max-width:900px;}
+
+/* ── grid ── */
+.row{display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:nowrap;}
+.lbl{width:38px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.lbl svg{width:22px;height:22px;stroke:var(--text2);}
+.steps{display:flex;gap:3px;flex-wrap:nowrap;}
+
+/* base step */
+.step{
+  width:28px;height:28px;border-radius:3px;cursor:pointer;
+  border:.5px solid var(--border2);background:var(--surface2);
+  position:relative;flex-shrink:0;overflow:hidden;
+  transition:background .06s,border-color .06s;
+}
+.step.on{background:var(--step-on);border-color:var(--step-on);}
+.step.off-range{opacity:.15;cursor:default;pointer-events:none;}
+.step.active::after{content:'';position:absolute;inset:0;background:#000;opacity:.35;border-radius:3px;}
+.step.on.active::after{opacity:.25;}
+.beat-gap{margin-left:6px;}
+
+/* sub-step dividers drawn as ::before pseudo lines */
+.step[data-sub="2"]::before{content:'';position:absolute;left:50%;top:2px;bottom:2px;width:1px;background:var(--bg);opacity:.7;}
+.step[data-sub="3"]::before{content:'';position:absolute;left:33%;top:2px;bottom:2px;width:1px;background:var(--bg);opacity:.7;box-shadow:9px 0 0 var(--bg);}
+.step[data-sub="4"]::before{content:'';position:absolute;left:25%;top:2px;bottom:2px;width:1px;background:var(--bg);opacity:.7;box-shadow:7px 0 0 var(--bg),14px 0 0 var(--bg);}
+/* sub-step count badge */
+.step .sub-badge{
+  position:absolute;bottom:1px;right:2px;
+  font-size:7px;line-height:1;color:var(--bg);opacity:.8;
+  font-family:monospace;font-weight:700;pointer-events:none;
+}
+.step.on .sub-badge{color:var(--surface2);}
+
+/* ── track controls ── */
+.tc{display:flex;align-items:center;gap:5px;margin-left:4px;flex-shrink:0;}
+.tc svg{width:13px;height:13px;opacity:.35;stroke:var(--text);}
+.tc-v{font-size:9px;font-weight:500;min-width:16px;color:var(--text2);font-family:monospace;}
+.tc input[type=range]{width:48px;cursor:pointer;}
+
+/* ── global controls ── */
+.ctrls{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;}
+.cg{display:flex;flex-direction:column;gap:3px;}
+.bpmr{display:flex;align-items:center;gap:5px;}
+.bpmv{font-size:12px;font-weight:500;min-width:26px;color:var(--text);font-family:monospace;}
+.dvd{width:1px;height:28px;background:var(--border2);flex-shrink:0;}
+
+button{
+  font-size:9px;padding:5px 10px;border-radius:5px;cursor:pointer;
+  border:.5px solid var(--border2);background:var(--btn-bg);color:var(--text);
+  transition:background .1s;display:flex;align-items:center;gap:4px;
+}
+button svg{width:13px;height:13px;flex-shrink:0;stroke:var(--text);}
+button:hover{background:var(--btn-hover);}
+button.playing{background:var(--text);color:var(--bg);border-color:var(--text);}
+button.playing svg{stroke:var(--bg);}
+button.active-btn{background:var(--text2);color:var(--bg);border-color:var(--text2);}
+button.lock-btn.locked{background:#3a3a20;border-color:#888840;}
+
+input[type=range]{
+  cursor:pointer;-webkit-appearance:none;height:2px;
+  background:var(--border2);border-radius:99px;outline:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:11px;height:11px;border-radius:50%;
+  background:var(--text2);cursor:pointer;transition:background .1s;
+}
+input[type=range]:hover::-webkit-slider-thumb{background:var(--text);}
+
+/* ── per-track extras below grid ── */
+.track-extras{
+  display:flex;align-items:center;gap:10px;
+  margin-left:44px;margin-bottom:6px;flex-wrap:wrap;
+}
+.vol-group{display:flex;flex-direction:column;gap:3px;align-items:center;}
+.vol-group svg{width:14px;height:14px;opacity:.35;stroke:var(--text);}
+.vol-group input{width:60px;}
+
+/* ── fx sections ── */
+.fxs{margin-top:12px;padding-top:10px;border-top:.5px solid var(--border);}
+.fxr{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:5px;}
+.fxg{display:flex;flex-direction:column;gap:3px;}
+.fxh{display:flex;align-items:center;gap:6px;margin-bottom:2px;}
+.fxh svg{width:15px;height:15px;opacity:.35;stroke:var(--text);}
+.fxvr{display:flex;align-items:center;gap:5px;}
+.fxv{font-size:9px;font-weight:500;min-width:32px;color:var(--text2);font-family:monospace;}
+.grb{height:4px;background:var(--surface2);border:.5px solid var(--border2);border-radius:99px;overflow:hidden;width:70px;margin-top:3px;}
+.grf{height:100%;width:0%;background:var(--text2);border-radius:99px;transition:width .08s;}
+
+/* ── auto-rand section ── */
+.auto-rand-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+
+/* ── DJ filter ── */
+.dj-wrap{position:relative;width:120px;}
+.dj-wrap input{width:120px;}
+.dj-centre{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:2px;height:8px;background:var(--text2);pointer-events:none;}
+
+/* ── scale selector ── */
+.scale-btns{display:flex;gap:4px;flex-wrap:wrap;}
+.scale-btn{font-size:8px;padding:3px 7px;}
+.scale-btn.active-btn{background:var(--text2);color:var(--bg);}
+.oct-row{display:flex;align-items:center;gap:6px;margin-top:4px;}
+.oct-btn{font-size:9px;padding:3px 8px;}
+
+/* ── midi section ── */
+.midi-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.midi-row select{
+  font-family:monospace;font-size:9px;padding:3px 6px;border-radius:4px;
+  border:.5px solid var(--border2);background:var(--surface2);color:var(--text);
+  outline:none;cursor:pointer;
+}
+.midi-ch{width:44px;}
+</style>
+</head>
+<body>
+<div id="wrap">
+<div id="ds">
+  <div id="grid"></div>
+
+  <!-- Global transport -->
+  <div class="ctrls">
+    <button id="playBtn">
+      <svg id="playIco" viewBox="0 0 16 16" fill="none" stroke-width="1.5" stroke-linecap="round">
+        <polygon points="3,2 14,8 3,14" fill="currentColor" stroke="none"/>
+      </svg>
+    </button>
+    <div class="dvd"></div>
+    <!-- BPM -->
+    <div class="cg">
+      <svg viewBox="0 0 28 10" style="width:26px;height:9px;opacity:.3;stroke:var(--text)" fill="none" stroke-width="1.2" stroke-linecap="round">
+        <line x1="2" y1="5" x2="26" y2="5"/><line x1="6" y1="2" x2="6" y2="8"/><line x1="14" y1="1" x2="14" y2="9"/><line x1="22" y1="2" x2="22" y2="8"/>
+      </svg>
+      <div class="bpmr">
+        <input type="range" id="bpmSlider" min="60" max="220" value="138" step="1" style="width:68px">
+        <span class="bpmv" id="bpmVal">138</span>
+      </div>
+    </div>
+    <div class="dvd"></div>
+    <button id="randBtn">
+      <svg viewBox="0 0 16 16" fill="none" stroke-width="1.4" stroke-linecap="round">
+        <path d="M2 8a6 6 0 0 1 10-4.5l1-1v3h-3l1-1A4 4 0 0 0 4 8"/>
+        <path d="M14 8a6 6 0 0 1-10 4.5l-1 1v-3h3l-1 1A4 4 0 0 0 12 8"/>
+      </svg>
+    </button>
+    <button id="clearBtn">
+      <svg viewBox="0 0 16 16" fill="none" stroke-width="1.4" stroke-linecap="round">
+        <line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/>
+      </svg>
+    </button>
+    <div class="dvd"></div>
+    <!-- Auto-randomise -->
+    <div class="cg">
+      <div class="auto-rand-row">
+        <button id="autoRandBtn">
+          <svg viewBox="0 0 16 16" fill="none" stroke-width="1.4" stroke-linecap="round">
+            <circle cx="8" cy="8" r="6"/><polyline points="8,5 8,8 10,10"/>
+          </svg>
+        </button>
+        <input type="range" id="autoRandBars" min="1" max="6" value="2" step="1" style="width:56px">
+        <span class="fxv" id="autoRandVal">2</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Per-track volume, vol-auto toggle, lock -->
+  <div id="trackExtras"></div>
+
+  <!-- Sub filter section (auto, no sliders) — empty header only -->
+
+  <!-- Compressor -->
+  <div class="fxs">
+    <div class="fxh">
+      <svg viewBox="0 0 20 12" fill="none" stroke-width="1.3" stroke-linecap="round" style="width:18px;height:11px">
+        <rect x="1" y="4" width="4" height="8" rx="1"/><rect x="7" y="2" width="4" height="10" rx="1"/><rect x="13" y="5" width="4" height="7" rx="1"/>
+        <line x1="1" y1="2" x2="19" y2="2" stroke-dasharray="2,2" opacity=".3"/>
+      </svg>
+    </div>
+    <div class="fxr">
+      <div class="fxg"><div class="fxvr"><input type="range" id="cmpThresh" min="-60" max="0" value="-18" step="1" style="width:68px"><span class="fxv" id="cmpThreshVal">-18db</span></div></div>
+      <div class="fxg"><div class="fxvr"><input type="range" id="cmpRatio" min="1" max="20" value="6" step="1" style="width:64px"><span class="fxv" id="cmpRatioVal">6:1</span></div></div>
+      <div class="fxg"><div class="fxvr"><input type="range" id="cmpAttack" min="0" max="50" value="2" step="1" style="width:60px"><span class="fxv" id="cmpAttackVal">2ms</span></div></div>
+      <div class="fxg"><div class="fxvr"><input type="range" id="cmpRelease" min="10" max="500" value="80" step="10" style="width:60px"><span class="fxv" id="cmpReleaseVal">80ms</span></div></div>
+      <div class="fxg"><div class="grb"><div class="grf" id="grFill"></div></div></div>
+    </div>
+  </div>
+
+  <!-- DJ Filter -->
+  <div class="fxs">
+    <div class="fxh">
+      <svg viewBox="0 0 22 12" fill="none" stroke-width="1.3" stroke-linecap="round" style="width:22px;height:12px">
+        <path d="M1 10 Q4 2 7 6 Q10 10 13 6 Q16 2 19 10" opacity=".9"/>
+        <line x1="11" y1="1" x2="11" y2="11" stroke-dasharray="2,2" opacity=".3"/>
+      </svg>
+    </div>
+    <div class="fxr">
+      <div class="dj-wrap">
+        <input type="range" id="djFilter" min="0" max="200" value="100" step="1">
+        <div class="dj-centre"></div>
+      </div>
+      <span class="fxv" id="djFilterVal">flat</span>
+    </div>
+  </div>
+
+  <!-- Downsampler -->
+  <div class="fxs">
+    <div class="fxh">
+      <svg viewBox="0 0 20 14" fill="none" stroke-width="1.3" stroke-linecap="round" style="width:18px;height:13px">
+        <path d="M1 7 L4 7 L5 3 L6 11 L7 7 L10 7"/>
+        <path d="M10 7 L13 7 L14 4 L15 10 L16 7 L19 7" opacity=".4"/>
+      </svg>
+    </div>
+    <div class="fxr">
+      <div class="fxg"><div class="fxvr"><input type="range" id="dsRate" min="1" max="32" value="1" step="1" style="width:72px"><span class="fxv" id="dsRateVal">1×</span></div></div>
+      <div class="fxg"><div class="fxvr"><input type="range" id="dsDepth" min="0" max="100" value="0" step="1" style="width:68px"><span class="fxv" id="dsDepthVal">0%</span></div></div>
+      <div class="fxg"><div class="fxvr"><input type="range" id="dsBits" min="2" max="16" value="16" step="1" style="width:66px"><span class="fxv" id="dsBitsVal">16b</span></div></div>
+    </div>
+  </div>
+
+  <!-- Metal reverb + scale -->
+  <div class="fxs">
+    <div class="fxh">
+      <svg viewBox="0 0 22 22" fill="none" stroke-width="1.4" stroke-linecap="round" style="width:14px;height:14px;opacity:.45;stroke:var(--text)">
+        <line x1="11" y1="2" x2="11" y2="20"/><line x1="4" y1="7" x2="18" y2="7"/><line x1="4" y1="13" x2="18" y2="13"/>
+        <line x1="6" y1="4" x2="11" y2="7"/><line x1="16" y1="4" x2="11" y2="7"/>
+      </svg>
+    </div>
+    <div class="fxr" style="flex-direction:column;align-items:flex-start;gap:8px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div class="fxvr">
+          <svg viewBox="0 0 22 14" fill="none" stroke-width="1.3" stroke-linecap="round" style="width:18px;height:12px;opacity:.4;stroke:var(--text)">
+            <path d="M2 10 C4 2 6 2 8 7 C10 12 12 12 14 7 C16 2 18 2 20 4" opacity=".9"/>
+            <path d="M2 10 C5 6 8 8 11 10 C14 12 17 8 20 4" opacity=".3"/>
+          </svg>
+          <input type="range" id="metalRev" min="0" max="100" value="0" step="1" style="width:80px">
+          <span class="fxv" id="metalRevVal">0%</span>
+        </div>
+      </div>
+      <!-- Scale selector -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <div class="scale-btns" id="scaleBtns"></div>
+        <div class="oct-row">
+          <button class="oct-btn" id="octDown">
+            <svg viewBox="0 0 10 10" fill="none" stroke-width="1.5" stroke-linecap="round" style="width:10px;height:10px"><line x1="2" y1="5" x2="8" y2="5"/></svg>
+          </button>
+          <span class="fxv" id="octVal">3 oct</span>
+          <button class="oct-btn" id="octUp">
+            <svg viewBox="0 0 10 10" fill="none" stroke-width="1.5" stroke-linecap="round" style="width:10px;height:10px"><line x1="5" y1="2" x2="5" y2="8"/><line x1="2" y1="5" x2="8" y2="5"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MIDI -->
+  <div class="fxs">
+    <div class="fxh">
+      <svg viewBox="0 0 22 14" fill="none" stroke-width="1.3" stroke-linecap="round" style="width:20px;height:12px">
+        <rect x="1" y="2" width="20" height="10" rx="2"/>
+        <line x1="5" y1="6" x2="5" y2="8"/><line x1="8" y1="5" x2="8" y2="9"/>
+        <line x1="11" y1="6" x2="11" y2="8"/><line x1="14" y1="5" x2="14" y2="9"/>
+        <line x1="17" y1="6" x2="17" y2="8"/>
+      </svg>
+    </div>
+    <div class="fxr">
+      <div class="fxg">
+        <div class="fxvr">
+          <select id="midiOut" style="min-width:160px;"></select>
+        </div>
+      </div>
+      <div id="midiChans" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+  </div>
+
+  <!-- Master vol -->
+  <div class="fxs">
+    <div class="fxh">
+      <svg viewBox="0 0 20 14" fill="none" stroke-width="1.3" stroke-linecap="round" style="width:18px;height:13px">
+        <polygon points="2,5 2,9 6,9 11,13 11,1 6,5" fill="currentColor" opacity=".5" stroke="none"/>
+        <path d="M13 4 Q16 7 13 10"/><path d="M15 2 Q19 7 15 12" opacity=".5"/>
+      </svg>
+    </div>
+    <div class="fxr">
+      <div class="fxg"><div class="fxvr"><input type="range" id="masterVol" min="0" max="100" value="88" step="1" style="width:86px"><span class="fxv" id="masterVolVal">88%</span></div></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// CONSTANTS & SCALES
+// ═══════════════════════════════════════════════════════════
+const DRUMS=[
+  {id:'click', label:'click'},
+  {id:'sub',   label:'sub'},
+  {id:'metal', label:'metal'},
+  {id:'glitch',label:'glitch'},
+];
+
+const RUNE={
+  click:`<svg viewBox="0 0 22 22" fill="none" stroke-width="1.4" stroke-linecap="round"><line x1="11" y1="2" x2="11" y2="20"/><line x1="5" y1="6" x2="11" y2="10"/><line x1="17" y1="6" x2="11" y2="10"/><line x1="7" y1="16" x2="11" y2="20"/><line x1="15" y1="16" x2="11" y2="20"/></svg>`,
+  sub:`<svg viewBox="0 0 22 22" fill="none" stroke-width="1.4" stroke-linecap="round"><line x1="11" y1="2" x2="11" y2="20"/><line x1="5" y1="5" x2="11" y2="8"/><line x1="17" y1="5" x2="11" y2="8"/><line x1="5" y1="17" x2="11" y2="14"/><line x1="17" y1="17" x2="11" y2="14"/></svg>`,
+  metal:`<svg viewBox="0 0 22 22" fill="none" stroke-width="1.4" stroke-linecap="round"><line x1="11" y1="2" x2="11" y2="20"/><line x1="4" y1="7" x2="18" y2="7"/><line x1="4" y1="13" x2="18" y2="13"/><line x1="6" y1="4" x2="11" y2="7"/><line x1="16" y1="4" x2="11" y2="7"/></svg>`,
+  glitch:`<svg viewBox="0 0 22 22" fill="none" stroke-width="1.4" stroke-linecap="round"><line x1="11" y1="2" x2="11" y2="20"/><line x1="4" y1="7" x2="11" y2="11"/><line x1="18" y1="7" x2="11" y2="11"/><line x1="4" y1="15" x2="11" y2="11"/><line x1="18" y1="15" x2="11" y2="11"/></svg>`,
+  len:`<svg viewBox="0 0 14 14" fill="none" stroke-width="1.3" stroke-linecap="round"><line x1="7" y1="1" x2="7" y2="13"/><line x1="2" y1="4" x2="7" y2="7"/><line x1="12" y1="4" x2="7" y2="7"/></svg>`,
+  prob:`<svg viewBox="0 0 14 14" fill="none" stroke-width="1.3" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><line x1="7" y1="4" x2="7" y2="7"/><line x1="7" y1="9" x2="7" y2="10"/></svg>`,
+  swing:`<svg viewBox="0 0 14 10" fill="none" stroke-width="1.3" stroke-linecap="round"><path d="M1 8 Q4 2 7 5 Q10 8 13 2"/></svg>`,
+};
+
+// Scale definitions — semitone intervals from root
+const SCALES={
+  'min pent': [0,3,5,7,10],
+  'maj pent': [0,2,4,7,9],
+  'minor':    [0,2,3,5,7,8,10],
+  'major':    [0,2,4,5,7,9,11],
+};
+let currentScale='min pent';
+let octaveSpan=3;   // 1–5
+let octaveBase=0;   // lowest octave index (C0 = 16.35 Hz)
+const C0=16.3516;
+
+function buildMetalNotes(){
+  const intervals=SCALES[currentScale];
+  const notes=[];
+  for(let oct=octaveBase;oct<octaveBase+octaveSpan;oct++){
+    for(const semi of intervals){
+      const freq=C0*Math.pow(2,oct+(semi/12));
+      notes.push(freq);
+    }
+  }
+  // add top root
+  notes.push(C0*Math.pow(2,octaveBase+octaveSpan));
+  return notes;
+}
+
+function randMetalRoot(){
+  const notes=buildMetalNotes();
+  let freq=notes[Math.floor(Math.random()*notes.length)];
+  // quarter-tone coin toss
+  if(Math.random()<0.5) freq*=Math.pow(2,0.25/12);
+  return freq;
+}
+
+// ═══════════════════════════════════════════════════════════
+// SEQUENCER STATE
+// ═══════════════════════════════════════════════════════════
+const DEFAULT={
+  click: [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],
+  sub:   [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],
+  metal: [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+  glitch:[0,0,1,0,0,0,0,1,0,1,0,0,0,0,0,1],
+};
+
+let patterns  ={};  // patterns[id][step] = 0|1
+let subSteps  ={};  // subSteps[id][step] = 1|2|3|4
+let trackLen  ={click:16,sub:16,metal:16,glitch:16};
+let trackProb ={click:100,sub:100,metal:100,glitch:100};
+let trackSwing={click:0,sub:0,metal:0,glitch:0};
+let volAuto   ={click:false,sub:false,metal:false,glitch:false};
+let trackLock ={click:false,sub:false,metal:false,glitch:false};
+
+DRUMS.forEach(d=>{
+  patterns[d.id]=[...DEFAULT[d.id]];
+  subSteps[d.id]=Array(16).fill(1);
+});
+
+// ═══════════════════════════════════════════════════════════
+// AUDIO ENGINE
+// ═══════════════════════════════════════════════════════════
+let actx=null,masterGain=null,outputGain=null,compressor=null,dsNode=null;
+let subFilter=null,gainNodes={},normGains={};
+let metalRevGain=null,metalRevDry=null,metalRevWet=null,metalConvolver=null;
+let djLPF=null,djHPF=null,djDryGain=null,djLPGain=null,djHPGain=null;
+let dsRate=1,dsDepth=0,dsBits=16;
+let dsSampleHold=new Float32Array(2),dsCounter=0;
+
+const NOISE_POOL_SIZE=8;
+let noiseBufs=[],noiseBufIdx=0;
+
+function getActx(){
+  if(actx)return actx;
+  actx=new(window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive',sampleRate:44100});
+
+  masterGain=actx.createGain(); masterGain.gain.value=0.88;
+  subFilter=actx.createBiquadFilter(); subFilter.type='lowpass';
+  subFilter.frequency.value=120; subFilter.Q.value=1;
+
+  compressor=actx.createDynamicsCompressor();
+  compressor.threshold.value=-18; compressor.knee.value=6;
+  compressor.ratio.value=6; compressor.attack.value=0.002; compressor.release.value=0.08;
+
+  outputGain=actx.createGain(); outputGain.gain.value=0.88;
+
+  // DJ filter — LP + HP with dry blend
+  djLPF=actx.createBiquadFilter(); djLPF.type='lowpass';  djLPF.frequency.value=20000; djLPF.Q.value=1;
+  djHPF=actx.createBiquadFilter(); djHPF.type='highpass'; djHPF.frequency.value=20;    djHPF.Q.value=1;
+  djDryGain=actx.createGain(); djDryGain.gain.value=1;
+  djLPGain =actx.createGain(); djLPGain.gain.value=0;
+  djHPGain =actx.createGain(); djHPGain.gain.value=0;
+
+  // Downsampler
+  const bufSize=4096;
+  dsNode=actx.createScriptProcessor(bufSize,2,2);
+  dsNode.onaudioprocess=e=>{
+    const iL=e.inputBuffer.getChannelData(0),iR=e.inputBuffer.getChannelData(1);
+    const oL=e.outputBuffer.getChannelData(0),oR=e.outputBuffer.getChannelData(1);
+    const hold=Math.max(1,Math.round(dsRate)),depth=dsDepth/100,steps=Math.pow(2,dsBits);
+    for(let i=0;i<bufSize;i++){
+      if(dsCounter%hold===0){
+        dsSampleHold[0]=Math.round(iL[i]*steps)/steps;
+        dsSampleHold[1]=Math.round(iR[i]*steps)/steps;
+      }
+      dsCounter++;
+      oL[i]=iL[i]*(1-depth)+dsSampleHold[0]*depth;
+      oR[i]=iR[i]*(1-depth)+dsSampleHold[1]*depth;
+    }
+  };
+
+  // Chain: masterGain → compressor → dsNode → DJ filter blend → outputGain → dest
+  masterGain.connect(compressor);
+  compressor.connect(dsNode);
+  // DJ filter parallel blend
+  dsNode.connect(djDryGain);
+  dsNode.connect(djLPF); djLPF.connect(djLPGain);
+  dsNode.connect(djHPF); djHPF.connect(djHPGain);
+  djDryGain.connect(outputGain);
+  djLPGain.connect(outputGain);
+  djHPGain.connect(outputGain);
+  outputGain.connect(actx.destination);
+
+  // Metal reverb
+  metalConvolver=actx.createConvolver();
+  const irLen=Math.floor(actx.sampleRate*1.4);
+  const irBuf=actx.createBuffer(2,irLen,actx.sampleRate);
+  for(let ch=0;ch<2;ch++){
+    const d=irBuf.getChannelData(ch);
+    for(let i=0;i<irLen;i++) d[i]=(Math.random()*2-1)*Math.pow(1-(i/irLen),2.8);
+  }
+  metalConvolver.buffer=irBuf; metalConvolver.normalize=true;
+  metalRevDry=actx.createGain(); metalRevDry.gain.value=1;
+  metalRevWet=actx.createGain(); metalRevWet.gain.value=0;
+
+  const normLevels={click:0.22,sub:0.30,metal:0.90,glitch:0.55};
+  DRUMS.forEach(d=>{
+    const norm=actx.createGain(); norm.gain.value=normLevels[d.id];
+    gainNodes[d.id]=actx.createGain(); gainNodes[d.id].gain.value=defaultVol(d.id);
+    if(d.id==='sub') subFilter.connect(norm);
+    norm.connect(gainNodes[d.id]);
+    if(d.id==='metal'){
+      gainNodes[d.id].connect(metalRevDry);
+      gainNodes[d.id].connect(metalConvolver);
+      metalRevDry.connect(masterGain);
+      metalConvolver.connect(metalRevWet);
+      metalRevWet.connect(masterGain);
+    } else {
+      gainNodes[d.id].connect(masterGain);
+    }
+    normGains[d.id]=norm;
+  });
+
+  // Noise pool
+  for(let n=0;n<NOISE_POOL_SIZE;n++){
+    const len=Math.floor(actx.sampleRate*0.065);
+    const b=actx.createBuffer(1,len,actx.sampleRate);
+    const d=b.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=Math.random()>0.35?(Math.random()*2-1):0;
+    noiseBufs.push(b);
+  }
+  return actx;
+}
+function defaultVol(id){return{click:0.7,sub:0.95,metal:0.6,glitch:0.55}[id]||0.7;}
+
+function startGRMeter(){
+  const fill=document.getElementById('grFill');
+  (function tick(){
+    requestAnimationFrame(tick);
+    if(!compressor)return;
+    fill.style.width=(Math.min(20,Math.abs(compressor.reduction))/20*100)+'%';
+  })();
+}
+
+// ═══════════════════════════════════════════════════════════
+// MIDI
+// ═══════════════════════════════════════════════════════════
+let midiAccess=null, midiOutput=null;
+const MIDI_NOTES={click:36,sub:37,metal:38,glitch:39}; // C1,C#1,D1,D#1
+const midiChans={click:1,sub:1,metal:1,glitch:1};
+
+async function initMidi(){
+  if(!navigator.requestMIDIAccess) return;
+  try{
+    midiAccess=await navigator.requestMIDIAccess();
+    populateMidiOutputs();
+    midiAccess.onstatechange=populateMidiOutputs;
+  }catch(e){console.warn('MIDI not available:',e);}
+}
+
+function populateMidiOutputs(){
+  const sel=document.getElementById('midiOut');
+  const prev=sel.value;
+  sel.innerHTML='<option value="">— no midi out —</option>';
+  if(!midiAccess)return;
+  midiAccess.outputs.forEach(out=>{
+    const o=new Option(out.name,out.id);
+    if(out.id===prev)o.selected=true;
+    sel.add(o);
+  });
+  sel.addEventListener('change',()=>{
+    midiOutput=midiAccess?midiAccess.outputs.get(sel.value):null;
+  },{once:true});
+  // Re-bind on each refresh
+  sel.onchange=()=>{midiOutput=midiAccess?midiAccess.outputs.get(sel.value):null;};
+}
+
+function sendMidiNote(drumId, velScale=1){
+  if(!midiOutput)return;
+  const note=MIDI_NOTES[drumId];
+  const ch=(midiChans[drumId]||1)-1;
+  const vel=Math.round(Math.min(127,Math.max(1,velScale*100)));
+  midiOutput.send([0x90|ch, note, vel]);
+  // note off after 50ms
+  setTimeout(()=>midiOutput&&midiOutput.send([0x80|ch, note, 0]),50);
+}
+
+// ═══════════════════════════════════════════════════════════
+// BUILD GRID
+// ═══════════════════════════════════════════════════════════
+const lenSliders={},lenVals={},probSliders={},probVals={},swingSliders={},swingVals={};
+
+const gridEl=document.getElementById('grid');
+DRUMS.forEach(drum=>{
+  const row=document.createElement('div'); row.className='row';
+
+  // Rune label
+  const lbl=document.createElement('div'); lbl.className='lbl';
+  lbl.innerHTML=RUNE[drum.id]; row.appendChild(lbl);
+
+  // Steps
+  const stepsEl=document.createElement('div');
+  stepsEl.className='steps'; stepsEl.id='steps-'+drum.id;
+  for(let i=0;i<16;i++){
+    const btn=document.createElement('div');
+    btn.className='step'+(patterns[drum.id][i]?' on':'');
+    if(i>=trackLen[drum.id])btn.classList.add('off-range');
+    if(i===4||i===8||i===12)btn.classList.add('beat-gap');
+    btn.dataset.drum=drum.id; btn.dataset.step=i;
+
+    // Left click = toggle on/off
+    btn.addEventListener('click',ev=>{
+      if(ev.shiftKey)return; // handled by mousedown
+      if(i>=trackLen[drum.id])return;
+      patterns[drum.id][i]^=1;
+      btn.classList.toggle('on',!!patterns[drum.id][i]);
+    });
+
+    // Shift+click = cycle sub-steps
+    btn.addEventListener('mousedown',ev=>{
+      if(!ev.shiftKey)return;
+      if(i>=trackLen[drum.id])return;
+      ev.preventDefault();
+      // Only meaningful on active steps — auto-activate
+      if(!patterns[drum.id][i]){ patterns[drum.id][i]=1; btn.classList.add('on'); }
+      const cur=subSteps[drum.id][i]||1;
+      const next=cur>=4?1:cur+1;
+      subSteps[drum.id][i]=next;
+      updateStepSubUI(btn,next);
+    });
+
+    stepsEl.appendChild(btn);
+  }
+  row.appendChild(stepsEl);
+
+  // Length
+  const lc=document.createElement('div'); lc.className='tc';
+  lc.innerHTML=RUNE.len;
+  const lv=document.createElement('span'); lv.className='tc-v'; lv.textContent=trackLen[drum.id]; lenVals[drum.id]=lv;
+  const ls=document.createElement('input'); ls.type='range'; ls.min=1; ls.max=16; ls.value=trackLen[drum.id]; ls.step=1;
+  lenSliders[drum.id]=ls;
+  ls.addEventListener('input',()=>{
+    trackLen[drum.id]=parseInt(ls.value); lv.textContent=trackLen[drum.id];
+    const s=document.getElementById('steps-'+drum.id);
+    [...s.children].forEach((b,i)=>b.classList.toggle('off-range',i>=trackLen[drum.id]));
+  });
+  lc.appendChild(ls); lc.appendChild(lv); row.appendChild(lc);
+
+  // Probability
+  const pc=document.createElement('div'); pc.className='tc';
+  pc.innerHTML=RUNE.prob;
+  const pv=document.createElement('span'); pv.className='tc-v'; pv.textContent='100'; probVals[drum.id]=pv;
+  const ps=document.createElement('input'); ps.type='range'; ps.min=0; ps.max=100; ps.value=100; ps.step=1;
+  probSliders[drum.id]=ps;
+  ps.addEventListener('input',()=>{trackProb[drum.id]=parseInt(ps.value); pv.textContent=trackProb[drum.id];});
+  pc.appendChild(ps); pc.appendChild(pv); row.appendChild(pc);
+
+  // Per-track swing
+  const sc=document.createElement('div'); sc.className='tc';
+  sc.innerHTML=RUNE.swing;
+  const sv=document.createElement('span'); sv.className='tc-v'; sv.textContent='0'; swingVals[drum.id]=sv;
+  const ss=document.createElement('input'); ss.type='range'; ss.min=0; ss.max=80; ss.value=0; ss.step=1;
+  swingSliders[drum.id]=ss;
+  ss.addEventListener('input',()=>{trackSwing[drum.id]=parseInt(ss.value); sv.textContent=trackSwing[drum.id];});
+  sc.appendChild(ss); sc.appendChild(sv); row.appendChild(sc);
+
+  gridEl.appendChild(row);
+});
+
+function updateStepSubUI(btn,n){
+  btn.dataset.sub=n;
+  let badge=btn.querySelector('.sub-badge');
+  if(n>1){
+    if(!badge){badge=document.createElement('span');badge.className='sub-badge';btn.appendChild(badge);}
+    badge.textContent=n;
+  } else {
+    if(badge)badge.remove();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// PER-TRACK EXTRAS (volume, vol-auto, lock, MIDI ch)
+// ═══════════════════════════════════════════════════════════
+const trackExtrasEl=document.getElementById('trackExtras');
+DRUMS.forEach(drum=>{
+  const row=document.createElement('div'); row.className='track-extras';
+
+  // Volume fader
+  const vg=document.createElement('div'); vg.className='vol-group';
+  vg.innerHTML=RUNE[drum.id].replace('width:22px;height:22px','width:13px;height:13px');
+  const vsl=document.createElement('input'); vsl.type='range'; vsl.min=0; vsl.max=100;
+  vsl.value=Math.round(defaultVol(drum.id)*100); vsl.step=1;
+  vg.appendChild(vsl); row.appendChild(vg);
+  vsl.addEventListener('input',e=>{
+    const ac=getActx();
+    gainNodes[drum.id].gain.setTargetAtTime(e.target.value/100,ac.currentTime,0.01);
+  });
+
+  // Vol-auto toggle
+  const vaBtn=document.createElement('button');
+  vaBtn.title='randomise volume per step';
+  vaBtn.innerHTML=`<svg viewBox="0 0 14 14" fill="none" stroke-width="1.4" stroke-linecap="round">
+    <line x1="2" y1="10" x2="5" y2="4"/><line x1="5" y1="4" x2="8" y2="8"/><line x1="8" y1="8" x2="11" y2="3"/>
+  </svg>`;
+  vaBtn.addEventListener('click',()=>{
+    volAuto[drum.id]=!volAuto[drum.id];
+    vaBtn.classList.toggle('active-btn',volAuto[drum.id]);
+  });
+  row.appendChild(vaBtn);
+
+  // Lock button
+  const lockBtn=document.createElement('button');
+  lockBtn.className='lock-btn';
+  lockBtn.title='lock track from randomiser';
+  lockBtn.innerHTML=`<svg viewBox="0 0 14 14" fill="none" stroke-width="1.4" stroke-linecap="round">
+    <rect x="3" y="6" width="8" height="7" rx="1"/>
+    <path d="M5 6V4a2 2 0 0 1 4 0v2"/>
+  </svg>`;
+  lockBtn.addEventListener('click',()=>{
+    trackLock[drum.id]=!trackLock[drum.id];
+    lockBtn.classList.toggle('locked',trackLock[drum.id]);
+  });
+  row.appendChild(lockBtn);
+
+  // MIDI channel selector
+  const mch=document.createElement('select'); mch.className='midi-ch';
+  for(let c=1;c<=16;c++) mch.add(new Option('ch'+c,c));
+  mch.addEventListener('change',()=>{midiChans[drum.id]=parseInt(mch.value);});
+  row.appendChild(mch);
+
+  trackExtrasEl.appendChild(row);
+});
+
+// ═══════════════════════════════════════════════════════════
+// SCALE BUTTONS
+// ═══════════════════════════════════════════════════════════
+const scaleBtnsEl=document.getElementById('scaleBtns');
+Object.keys(SCALES).forEach(name=>{
+  const b=document.createElement('button');
+  b.className='scale-btn'+(name===currentScale?' active-btn':'');
+  b.textContent=name;
+  b.addEventListener('click',()=>{
+    currentScale=name;
+    scaleBtnsEl.querySelectorAll('.scale-btn').forEach(x=>x.classList.remove('active-btn'));
+    b.classList.add('active-btn');
+  });
+  scaleBtnsEl.appendChild(b);
+});
+
+document.getElementById('octDown').addEventListener('click',()=>{
+  if(octaveSpan>1)octaveSpan--;
+  document.getElementById('octVal').textContent=octaveSpan+' oct';
+});
+document.getElementById('octUp').addEventListener('click',()=>{
+  if(octaveSpan<5)octaveSpan++;
+  document.getElementById('octVal').textContent=octaveSpan+' oct';
+});
+
+// ═══════════════════════════════════════════════════════════
+// SYNTHESIS
+// ═══════════════════════════════════════════════════════════
+function playClick(t,vel=1){
+  const ac=getActx(),o=ac.createOscillator(),e=ac.createGain();
+  o.type='sine';o.frequency.setValueAtTime(8000,t);o.frequency.exponentialRampToValueAtTime(400,t+0.008);
+  e.gain.setValueAtTime(0,t);e.gain.linearRampToValueAtTime(vel,t+0.0005);e.gain.exponentialRampToValueAtTime(0.0001,t+0.018);
+  o.connect(e);e.connect(normGains.click);o.start(t);o.stop(t+0.022);
+  const o2=ac.createOscillator(),e2=ac.createGain();
+  o2.type='sine';o2.frequency.value=16000;
+  e2.gain.setValueAtTime(0,t);e2.gain.linearRampToValueAtTime(vel*0.4,t+0.0003);e2.gain.exponentialRampToValueAtTime(0.0001,t+0.008);
+  o2.connect(e2);e2.connect(normGains.click);o2.start(t);o2.stop(t+0.01);
+}
+function playSub(t,vel=1){
+  const ac=getActx(),o=ac.createOscillator(),e=ac.createGain();
+  o.type='sine';o.frequency.setValueAtTime(80,t);o.frequency.exponentialRampToValueAtTime(32,t+0.08);
+  e.gain.setValueAtTime(0,t);e.gain.linearRampToValueAtTime(vel,t+0.001);e.gain.exponentialRampToValueAtTime(0.0001,t+0.22);
+  o.connect(e);e.connect(subFilter);o.start(t);o.stop(t+0.25);
+  const o2=ac.createOscillator(),e2=ac.createGain();
+  o2.type='triangle';o2.frequency.setValueAtTime(280,t);o2.frequency.exponentialRampToValueAtTime(60,t+0.015);
+  e2.gain.setValueAtTime(0,t);e2.gain.linearRampToValueAtTime(vel*0.8,t+0.0005);e2.gain.exponentialRampToValueAtTime(0.0001,t+0.018);
+  o2.connect(e2);e2.connect(subFilter);o2.start(t);o2.stop(t+0.02);
+  subFilter.frequency.setValueAtTime(50+Math.random()*230,t);
+  subFilter.Q.setValueAtTime(0.5+Math.random()*7.5,t);
+}
+function playMetal(t,vel=1){
+  const ac=getActx(),root=randMetalRoot();
+  [1,2.756,5.404,8.933,13.42].forEach((ratio,i)=>{
+    const freq=root*ratio,o=ac.createOscillator(),e=ac.createGain(),bp=ac.createBiquadFilter();
+    o.type='square';o.frequency.value=freq;bp.type='bandpass';bp.frequency.value=freq;bp.Q.value=14;
+    const decay=0.05+i*0.022;
+    e.gain.setValueAtTime(0,t);e.gain.linearRampToValueAtTime(vel*0.2,t+0.0005);e.gain.exponentialRampToValueAtTime(0.0001,t+decay);
+    o.connect(bp);bp.connect(e);e.connect(normGains.metal);o.start(t);o.stop(t+decay+0.005);
+  });
+}
+function playGlitch(t,vel=1){
+  const ac=getActx();
+  const buf=noiseBufs[noiseBufIdx%NOISE_POOL_SIZE]; noiseBufIdx++;
+  const dur=0.025+Math.random()*0.04;
+  const src=ac.createBufferSource();src.buffer=buf;
+  const ws=ac.createWaveShaper(),curve=new Float32Array(256);
+  for(let i=0;i<256;i++){const x=(i*2)/256-1;curve[i]=Math.max(-0.6,Math.min(0.6,x*4));}
+  ws.curve=curve;
+  const bp=ac.createBiquadFilter();bp.type='bandpass';bp.frequency.value=800+Math.random()*3200;bp.Q.value=2.5;
+  const e=ac.createGain();
+  e.gain.setValueAtTime(0,t);e.gain.linearRampToValueAtTime(vel,t+0.001);e.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  src.connect(ws);ws.connect(bp);bp.connect(e);e.connect(normGains.glitch);src.start(t);src.stop(t+dur+0.005);
+}
+const SYNTHS={click:playClick,sub:playSub,metal:playMetal,glitch:playGlitch};
+
+// ═══════════════════════════════════════════════════════════
+// SCHEDULER  (MessageChannel for tight Windows timing)
+// ═══════════════════════════════════════════════════════════
+let playing=false,trackSteps={click:0,sub:0,metal:0,glitch:0};
+let nextStepTime=0,startTime=0,bpm=138;
+
+const mc=new MessageChannel();
+mc.port1.onmessage=()=>{
+  if(!playing)return;
+  const ac=actx;
+  while(nextStepTime<ac.currentTime+0.15){
+    const globalStep=Math.round((nextStepTime-startTime)/baseDur());
+    DRUMS.forEach(d=>{
+      const sw=trackSwing[d.id]||0;
+      const ls=trackSteps[d.id]%trackLen[d.id];
+      if(patterns[d.id][ls]&&Math.random()*100<trackProb[d.id]){
+        const vel=volAuto[d.id]?(0.5+Math.random()*0.5):1;
+        const nSub=subSteps[d.id][ls]||1;
+        if(nSub===1){
+          SYNTHS[d.id](nextStepTime,vel);
+          sendMidiNote(d.id,vel);
+        } else {
+          // Fire sub-steps evenly within this step's time slot
+          const slotDur=swingDur(globalStep,sw);
+          for(let s=0;s<nSub;s++){
+            const subT=nextStepTime+(s/nSub)*slotDur;
+            SYNTHS[d.id](subT,vel*(0.7+s*0.1));
+            sendMidiNote(d.id,vel);
+          }
+        }
+      }
+      trackSteps[d.id]++;
+    });
+    scheduleUI(nextStepTime);
+    // Advance time — use click track's swing as representative global clock tick
+    const sw0=trackSwing['click']||0;
+    nextStepTime+=swingDur(globalStep,sw0);
+    // Each track's individual swing offsets the feel within the step but
+    // the grid advances on the global clock — this keeps tracks in sync
+  }
+  mc.port2.postMessage(0);
+};
+
+function baseDur(){return(60/bpm)/4;}
+function swingDur(step,swingAmt){
+  const dur=baseDur();
+  return step%2===0?dur*(1+swingAmt/200):dur*(1-swingAmt/200);
+}
+
+function scheduleUI(t){
+  const ac=actx;
+  setTimeout(()=>{
+    document.querySelectorAll('.step.active').forEach(el=>el.classList.remove('active'));
+    DRUMS.forEach(d=>{
+      const ls=(trackSteps[d.id]-1)%trackLen[d.id];
+      const row=document.getElementById('steps-'+d.id);
+      if(row)row.children[ls]?.classList.add('active');
+    });
+  },Math.max(0,(t-ac.currentTime)*1000-16));
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUTO-RANDOMISE
+// ═══════════════════════════════════════════════════════════
+let autoRandActive=false,autoRandBars=2,autoRandStepCount=0;
+const autoRandBtn=document.getElementById('autoRandBtn');
+autoRandBtn.addEventListener('click',()=>{
+  autoRandActive=!autoRandActive;
+  autoRandBtn.classList.toggle('active-btn',autoRandActive);
+  autoRandStepCount=0;
+});
+document.getElementById('autoRandBars').addEventListener('input',e=>{
+  autoRandBars=parseInt(e.target.value);
+  document.getElementById('autoRandVal').textContent=autoRandBars;
+});
+
+function checkAutoRand(){
+  if(!autoRandActive)return;
+  autoRandStepCount++;
+  const stepsPerBar=16;
+  if(autoRandStepCount>=autoRandBars*stepsPerBar){
+    autoRandStepCount=0;
+    doRand();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// RANDOMISE
+// ═══════════════════════════════════════════════════════════
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function doRand(){
+  DRUMS.forEach(d=>{
+    if(trackLock[d.id])return; // respect lock
+    const nl=pick([2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]);
+    trackLen[d.id]=nl; lenSliders[d.id].value=nl; lenVals[d.id].textContent=nl;
+    const np=pick([40,50,60,70,75,80,85,90,95,100,100,100]);
+    trackProb[d.id]=np; probSliders[d.id].value=np; probVals[d.id].textContent=np;
+    const se=document.getElementById('steps-'+d.id);
+    [...se.children].forEach((b,i)=>b.classList.toggle('off-range',i>=nl));
+    patterns[d.id]=Array.from({length:16},(_,i)=>{
+      if(i>=nl)return 0;
+      if(d.id==='click') return Math.random()>0.45?1:0;
+      if(d.id==='sub')   return(i===0||i===Math.floor(nl/2))?1:Math.random()>0.82?1:0;
+      if(d.id==='metal') return Math.random()>0.72?1:0;
+      if(d.id==='glitch')return Math.random()>0.60?1:0;
+      return 0;
+    });
+    // Randomise sub-steps occasionally
+    subSteps[d.id]=Array.from({length:16},(_,i)=>{
+      if(!patterns[d.id][i])return 1;
+      return Math.random()>0.85?pick([2,3,4]):1;
+    });
+    [...se.children].forEach((btn,i)=>{
+      btn.classList.toggle('on',!!patterns[d.id][i]);
+      updateStepSubUI(btn,subSteps[d.id][i]);
+    });
+  });
+  // Downsampler NOT randomised (uncoupled as requested)
+}
+document.getElementById('randBtn').addEventListener('click',doRand);
+document.getElementById('clearBtn').addEventListener('click',()=>{
+  DRUMS.forEach(d=>{
+    patterns[d.id]=Array(16).fill(0);
+    subSteps[d.id]=Array(16).fill(1);
+    [...document.getElementById('steps-'+d.id).children].forEach(b=>{
+      b.classList.remove('on'); updateStepSubUI(b,1);
+    });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+// PLAY / STOP
+// ═══════════════════════════════════════════════════════════
+const playBtn=document.getElementById('playBtn');
+const playIco=document.getElementById('playIco');
+function startStop(){
+  const ac=getActx();
+  if(!playing){
+    ac.resume().then(()=>{
+      DRUMS.forEach(d=>{trackSteps[d.id]=0;});
+      autoRandStepCount=0;
+      startTime=ac.currentTime+0.05; nextStepTime=startTime;
+      playing=true; playBtn.classList.add('playing');
+      playIco.innerHTML='<rect x="3" y="2" width="4" height="12" rx="1" fill="currentColor" stroke="none"/><rect x="9" y="2" width="4" height="12" rx="1" fill="currentColor" stroke="none"/>';
+      mc.port2.postMessage(0);
+      startGRMeter();
+    });
+  } else {
+    playing=false; playBtn.classList.remove('playing');
+    playIco.innerHTML='<polygon points="3,2 14,8 3,14" fill="currentColor" stroke="none"/>';
+    document.querySelectorAll('.step.active').forEach(el=>el.classList.remove('active'));
+  }
+}
+playBtn.addEventListener('click',startStop);
+
+// Hook auto-rand counter into scheduleUI
+const _origScheduleUI=scheduleUI;
+// We override by patching the mc loop to also call checkAutoRand
+const _origMcMsg=mc.port1.onmessage;
+mc.port1.onmessage=function(ev){
+  _origMcMsg(ev);
+  // checkAutoRand is called per global step advance — done in scheduler above
+};
+// Simpler: call checkAutoRand inside the scheduler's DRUMS.forEach result — already wired via global step counter
+// Re-patch scheduler to include auto-rand check:
+mc.port1.onmessage=()=>{
+  if(!playing)return;
+  const ac=actx;
+  while(nextStepTime<ac.currentTime+0.15){
+    const globalStep=Math.round((nextStepTime-startTime)/baseDur());
+    DRUMS.forEach(d=>{
+      const sw=trackSwing[d.id]||0;
+      const ls=trackSteps[d.id]%trackLen[d.id];
+      if(patterns[d.id][ls]&&Math.random()*100<trackProb[d.id]){
+        const vel=volAuto[d.id]?(0.5+Math.random()*0.5):1;
+        const nSub=subSteps[d.id][ls]||1;
+        if(nSub===1){
+          SYNTHS[d.id](nextStepTime,vel);
+          sendMidiNote(d.id,vel);
+        } else {
+          const slotDur=swingDur(globalStep,sw);
+          for(let s=0;s<nSub;s++){
+            const subT=nextStepTime+(s/nSub)*slotDur;
+            SYNTHS[d.id](subT,vel*(0.7+s*0.1));
+          }
+          sendMidiNote(d.id,vel);
+        }
+      }
+      trackSteps[d.id]++;
+    });
+    scheduleUI(nextStepTime);
+    const sw0=trackSwing['click']||0;
+    nextStepTime+=swingDur(globalStep,sw0);
+    checkAutoRand();
+  }
+  mc.port2.postMessage(0);
+};
+
+// ═══════════════════════════════════════════════════════════
+// TRANSPORT CONTROLS
+// ═══════════════════════════════════════════════════════════
+document.getElementById('bpmSlider').addEventListener('input',e=>{
+  bpm=parseInt(e.target.value);
+  document.getElementById('bpmVal').textContent=bpm;
+});
+
+// ═══════════════════════════════════════════════════════════
+// FX CONTROLS
+// ═══════════════════════════════════════════════════════════
+document.getElementById('cmpThresh').addEventListener('input',e=>{const v=parseInt(e.target.value);document.getElementById('cmpThreshVal').textContent=v+'db';if(compressor)compressor.threshold.value=v;});
+document.getElementById('cmpRatio').addEventListener('input',e=>{const v=parseInt(e.target.value);document.getElementById('cmpRatioVal').textContent=v+':1';if(compressor)compressor.ratio.value=v;});
+document.getElementById('cmpAttack').addEventListener('input',e=>{const v=parseInt(e.target.value);document.getElementById('cmpAttackVal').textContent=v+'ms';if(compressor)compressor.attack.value=v/1000;});
+document.getElementById('cmpRelease').addEventListener('input',e=>{const v=parseInt(e.target.value);document.getElementById('cmpReleaseVal').textContent=v+'ms';if(compressor)compressor.release.value=v/1000;});
+
+// DJ Filter — centre=100 is flat, <100=LP, >100=HP
+document.getElementById('djFilter').addEventListener('input',e=>{
+  const v=parseInt(e.target.value); // 0–200
+  const valEl=document.getElementById('djFilterVal');
+  getActx();
+  if(v===100){
+    djDryGain.gain.setTargetAtTime(1,actx.currentTime,0.02);
+    djLPGain.gain.setTargetAtTime(0,actx.currentTime,0.02);
+    djHPGain.gain.setTargetAtTime(0,actx.currentTime,0.02);
+    valEl.textContent='flat';
+  } else if(v<100){
+    // LP side: map 0–100 → freq 40–20000 Hz (log)
+    const t=(v/100); // 0=full LP, 1=flat
+    const freq=40*Math.pow(500,t); // 40Hz to 20kHz
+    djLPF.frequency.setTargetAtTime(freq,actx.currentTime,0.02);
+    djLPF.Q.setTargetAtTime(1+2*(1-t),actx.currentTime,0.02);
+    djDryGain.gain.setTargetAtTime(t,actx.currentTime,0.02);
+    djLPGain.gain.setTargetAtTime(1-t,actx.currentTime,0.02);
+    djHPGain.gain.setTargetAtTime(0,actx.currentTime,0.02);
+    valEl.textContent='LP '+(freq<1000?Math.round(freq)+'Hz':(freq/1000).toFixed(1)+'k');
+  } else {
+    // HP side: map 100–200 → freq 20–8000 Hz (log)
+    const t=((v-100)/100); // 0=flat, 1=full HP
+    const freq=20*Math.pow(400,t); // 20Hz to 8kHz
+    djHPF.frequency.setTargetAtTime(freq,actx.currentTime,0.02);
+    djHPF.Q.setTargetAtTime(1+2*t,actx.currentTime,0.02);
+    djDryGain.gain.setTargetAtTime(1-t,actx.currentTime,0.02);
+    djHPGain.gain.setTargetAtTime(t,actx.currentTime,0.02);
+    djLPGain.gain.setTargetAtTime(0,actx.currentTime,0.02);
+    valEl.textContent='HP '+(freq<1000?Math.round(freq)+'Hz':(freq/1000).toFixed(1)+'k');
+  }
+});
+
+// Downsampler
+document.getElementById('dsRate').addEventListener('input',e=>{dsRate=parseInt(e.target.value);document.getElementById('dsRateVal').textContent=dsRate+'×';});
+document.getElementById('dsDepth').addEventListener('input',e=>{dsDepth=parseInt(e.target.value);document.getElementById('dsDepthVal').textContent=dsDepth+'%';});
+document.getElementById('dsBits').addEventListener('input',e=>{dsBits=parseInt(e.target.value);document.getElementById('dsBitsVal').textContent=dsBits+'b';});
+
+// Metal reverb
+document.getElementById('metalRev').addEventListener('input',e=>{
+  const v=parseInt(e.target.value)/100;
+  document.getElementById('metalRevVal').textContent=e.target.value+'%';
+  getActx();
+  metalRevWet.gain.setTargetAtTime(v*0.9,actx.currentTime,0.01);
+  metalRevDry.gain.setTargetAtTime(1-v*0.5,actx.currentTime,0.01);
+});
+
+// Master vol
+document.getElementById('masterVol').addEventListener('input',e=>{
+  const v=parseInt(e.target.value)/100;
+  document.getElementById('masterVolVal').textContent=e.target.value+'%';
+  if(outputGain) outputGain.gain.setTargetAtTime(v,actx.currentTime,0.01);
+});
+
+// ═══════════════════════════════════════════════════════════
+// MIDI CHANNEL SELECTS (built dynamically)
+// ═══════════════════════════════════════════════════════════
+const midiChansEl=document.getElementById('midiChans');
+DRUMS.forEach(drum=>{
+  // Already built inline in track-extras — this section left for any additional
+  // per-track MIDI note display
+});
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+initMidi();
+</script>
+</body>
+</html>

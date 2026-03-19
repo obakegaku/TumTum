@@ -7,6 +7,7 @@ It uses concepts learned from my own drum programming to break, where required, 
 Sub-step programming, variable step length, step probabilty, volume automisation as well as full or partial pattern randomisation is avaible for experimenting with.
 
 __The Tracks__
+There are four instrument tracks on TumTum, each one has four voice profiles that can be selected.
 - Click
 - Subby
 - Squinth
@@ -14,9 +15,8 @@ __The Tracks__
 
 Track 3, Squinth, is a synthesizer voice. 
 For eachstep enabled, it will generate a random note within it's defined scale. 
-There is also a coin-toss whether a quarter tone offset is applied to the current step for a musical microtonal amount of detune. 
-Along with the usual per track controls, Track 3 is unique in that it can also apply a percentage of reverb to it's output. (Track 3 + Wave Glyph slider)
-
+There is also low probabilty that a quarter tone offset is applied to the current step for microtonal, yet musical amount of detune. 
+Along with the usual per track controls, Track 3 is unique in that has a dedicated decay envelope slider (Decay Glyph) and can also apply a percentage of reverb to it's output. (Sonar Glyph slider)
  
 __The Sequencer__
 Pressing the Play button will begin the sequencer. Steps progress at the rate determined by tripple Cross Glyph slider, from 60 - 220bpm.
@@ -29,14 +29,14 @@ Tracks have the follwoing signal path:
 Track > volume automisation > track level slider > downsampler > Compressor > Master Level
 Track 3's reverb section is applied post downsampler, pre compressor.
 
-
 __Per track Controls:__ 
 - Step length (Cross glyph)
 - Step Probabilty (exclamation Glyph)
 - Swing ( wave glyph)
 - Track volume ( Track Glyph slider)
 - Volume automisation (Lightening Glyph switch)
-- Groove lock (Padlock Glyph switch) 
+- Groove lock (Padlock Glyph switch)
+- voice profile (Triange, Square, Pentagon, Octagon glyph switches)
 - Midi output
 
 __Global Controls__
@@ -44,6 +44,10 @@ TumTum has global controls for:
 - Compressor with Threshhold, Ratio, Attack and Decay (Levels Glyph slider)
 - DJ style lowpass/ highpass filter (Notch Glyph slider) 
 - A downsampler with sample rate, Depth and bit parameters (Waveform pair Glyph slider)
+
+__Randomisation, Auto-randomisation and Randomisation Locking__
+
+
 
 __MIDI__
 

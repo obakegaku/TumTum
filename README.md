@@ -26,18 +26,18 @@ Tuplets, triplets and quadruplets.
  
  __Signal Flow__ (for the time being) 
 Tracks have the follwoing signal path:
-Track > volume automisation > track level slider > downsampler > Compressor > Master Level
+Track > volume automisation > track level slider > downsampler > Compressor > Lowpass/Highpass filter>  Master Level
 Track 3's reverb section is applied post downsampler, pre compressor.
 
 __Per track Controls:__ 
-- Step length (Cross glyph)
-- Step Probabilty (exclamation Glyph)
-- Swing ( wave glyph)
-- Track volume ( Track Glyph slider)
-- Volume automisation (Lightening Glyph switch)
-- Groove lock (Padlock Glyph switch)
-- voice profile (Triange, Square, Pentagon, Octagon glyph switches)
-- Midi output
+- Step length (Cross Glyph Slider)
+- Step Probabilty (exclamation Glyph Slider)
+- Step Swing amount (Swing Glyph Slider)
+- Track Volume (Track Glyph slider)
+- Volume Automisation (Lightning Glyph Switch)
+- Groove Lock (Padlock Glyph Switch)
+- Coice profile (Triangle, Square, Pentagon, Octagon Glyph Switches)
+- MIDI channel output dropdown
 
 __Global Controls__
 TumTum has global controls for: 

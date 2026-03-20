@@ -1543,7 +1543,6 @@ document.getElementById('cmpRatio').addEventListener('input',e=>{const v=parseIn
 document.getElementById('cmpAttack').addEventListener('input',e=>{const v=parseInt(e.target.value);document.getElementById('cmpAttackVal').textContent=v+'ms';if(compressor)compressor.attack.value=v/1000;});
 document.getElementById('cmpRelease').addEventListener('input',e=>{const v=parseInt(e.target.value);document.getElementById('cmpReleaseVal').textContent=v+'ms';if(compressor)compressor.release.value=v/1000;});
 
-// DJ Filter — centre=100 is flat, <100=LP, >100=HP
 // 3-Band EQ
 document.getElementById('eqLow').addEventListener('input',e=>{
   const v=parseInt(e.target.value);

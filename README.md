@@ -71,11 +71,10 @@ __MIDI__
 In addition to the Web Audio track voices, TumTum can also send it's MIDI output via WEB MIDI.
 Typically this would involve using something like Tobias Erichsen's LoopMIDI on Windows, or enabling the built in IAC Driver on MAC to create a "virtual" MIDI device to be picked in other programmes. For example routing TumTum's MIDI to VCV Rack, Ableton Live, Bitwig etc.
 The MIDI Output dropdown should reflect the method of routing your MIDI.
-
-Track 1 sends note on messages per step on C2, to it's specified MIDI channel
-Track 2 sends note on messages per step on C#2, to it's specified MIDI channel
-Track 3 sends note on messages per step on D2, to it's specified MIDI channel
-Track 4 sends note on messages per step on D#2, to it's specified MIDI channel
+- Track 1 sends note on messages per step on C2, to it's specified MIDI channel
+- Track 2 sends note on messages per step on C#2, to it's specified MIDI channel
+- Track 3 sends note on messages per step on D2, to it's specified MIDI channel
+- Track 4 sends note on messages per step on D#2, to it's specified MIDI channel
 
 
 

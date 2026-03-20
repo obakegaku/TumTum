@@ -182,23 +182,30 @@ input[type=range]:hover::-webkit-slider-thumb{background:var(--text);}
   <div id="grid"></div>
 
   <!-- Global transport -->
-  <div class="ctrls">
+  <div class="ctrls" style="gap:3px;">
     <button id="playBtn">
       <svg id="playIco" viewBox="0 0 16 16" fill="none" stroke-width="1.5" stroke-linecap="round">
         <polygon points="3,2 14,8 3,14" fill="currentColor" stroke="none"/>
       </svg>
     </button>
     <!-- BPM -->
-    <div class="cg" style="margin-left:2px;">
-      <svg viewBox="0 0 28 10" style="width:26px;height:9px;opacity:.3;stroke:var(--text)" fill="none" stroke-width="1.2" stroke-linecap="round">
-        <line x1="2" y1="5" x2="26" y2="5"/><line x1="6" y1="2" x2="6" y2="8"/><line x1="14" y1="1" x2="14" y2="9"/><line x1="22" y1="2" x2="22" y2="8"/>
-      </svg>
+    <div class="cg" style="margin-left:3px;">
+      <div style="width:120px;display:flex;justify-content:center;">
+        <svg viewBox="0 0 28 10" style="width:14px;height:9px;opacity:.3;stroke:var(--text)" fill="none" stroke-width="1.2" stroke-linecap="round">
+          <line x1="2" y1="5" x2="26" y2="5"/><line x1="6" y1="2" x2="6" y2="8"/><line x1="14" y1="1" x2="14" y2="9"/><line x1="22" y1="2" x2="22" y2="8"/>
+        </svg>
+      </div>
       <div class="bpmr">
-        <input type="range" id="bpmSlider" min="60" max="220" value="138" step="1" style="width:92px">
+        <input type="range" id="bpmSlider" min="60" max="220" value="138" step="1" style="width:120px">
         <span class="bpmv" id="bpmVal">138</span>
       </div>
     </div>
-    <div style="display:flex;gap:3px;">
+  </div>
+
+  <!-- Per-track volume, vol-auto toggle, lock -->
+  <div id="trackExtras" style="display:grid;row-gap:6px;width:100%;position:relative;">
+    <!-- Rand group: absolutely positioned 5px above track 1, aligned with lock/voice1/voice2 -->
+    <div style="position:absolute;top:-34px;left:190px;display:flex;align-items:center;gap:3px;z-index:1;">
       <button id="randBtn" style="width:29px;height:29px;padding:0;justify-content:center;">
         <svg viewBox="0 0 16 16" fill="none" stroke-width="1.4" stroke-linecap="round">
           <path d="M2 8a6 6 0 0 1 10-4.5l1-1v3h-3l1-1A4 4 0 0 0 4 8"/>
@@ -210,23 +217,15 @@ input[type=range]:hover::-webkit-slider-thumb{background:var(--text);}
           <line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/>
         </svg>
       </button>
-    </div>
-    <!-- Auto-randomise -->
-    <div class="cg" style="margin-left:3px;">
-      <div class="auto-rand-row">
-        <button id="autoRandBtn" style="width:29px;height:29px;padding:0;justify-content:center;">
-          <svg viewBox="0 0 16 16" fill="none" stroke-width="1.4" stroke-linecap="round">
-            <circle cx="8" cy="8" r="6"/><polyline points="8,5 8,8 10,10"/>
-          </svg>
-        </button>
-        <input type="range" id="autoRandBars" min="1" max="6" value="2" step="1" style="width:56px">
-        <span class="fxv" id="autoRandVal">2</span>
-      </div>
+      <button id="autoRandBtn" style="width:29px;height:29px;padding:0;justify-content:center;">
+        <svg viewBox="0 0 16 16" fill="none" stroke-width="1.4" stroke-linecap="round">
+          <circle cx="8" cy="8" r="6"/><polyline points="8,5 8,8 10,10"/>
+        </svg>
+      </button>
+      <input type="range" id="autoRandBars" min="1" max="6" value="2" step="1" style="width:56px">
+      <span class="fxv" id="autoRandVal">2</span>
     </div>
   </div>
-
-  <!-- Per-track volume, vol-auto toggle, lock -->
-  <div id="trackExtras" style="display:grid;row-gap:6px;width:100%;position:relative;"></div>
 
   <!-- Sub filter section (auto, no sliders) — empty header only -->
 
@@ -1022,48 +1021,6 @@ function alignQuantiserColumn(){
   if(newWidth>0)qwrap.style.width=newWidth+'px';
 }
 
-function alignTransportButtons(){
-  const randBtn=document.getElementById('randBtn');
-  const autoBtn=document.getElementById('autoRandBtn');
-  if(!randBtn||!autoBtn)return;
-
-  // Reset margins to base before measuring
-  const randGroup=randBtn.parentElement;
-  const autoGroup=autoBtn.closest('.cg');
-  randGroup.style.marginLeft='0px';
-  autoGroup.style.marginLeft='3px';
-
-  // Align rand centre to track 1 lock centre
-  const lock1=document.querySelector('#trackExtras .lock-btn:not(.fx-lock)');
-  if(!lock1)return;
-  const lockCX=lock1.getBoundingClientRect().left+14.5;
-  const randCX=randBtn.getBoundingClientRect().left+14.5;
-  randGroup.style.marginLeft=Math.round(lockCX-randCX)+'px';
-
-  // Align auto-rand centre to track 1 voice 1 centre
-  const voice1=document.querySelector('#trackExtras .voice-group .voice-btn');
-  if(!voice1)return;
-  const v1CX=voice1.getBoundingClientRect().left+14.5;
-  const autoCX=autoBtn.getBoundingClientRect().left+14.5;
-  autoGroup.style.marginLeft=Math.round(3+(v1CX-autoCX))+'px';
-
-  // Align BPM value centre to track 1 vol-auto centre
-  const vaBtn=document.querySelector('#trackExtras .track-extras:first-of-type button[title="randomise volume per step"]');
-  const bpmVal=document.getElementById('bpmVal');
-  const bpmSlider=document.getElementById('bpmSlider');
-  if(vaBtn&&bpmVal&&bpmSlider){
-    bpmSlider.style.width='92px';
-    void bpmSlider.offsetWidth;
-    const vaCX=vaBtn.getBoundingClientRect().left+14.5;
-    const bpmR=bpmVal.getBoundingClientRect();
-    const bpmCX=bpmR.left+bpmR.width/2;
-    const w=parseInt(bpmSlider.style.width);
-    bpmSlider.style.width=Math.max(40,w+Math.round(vaCX-bpmCX))+'px';
-  }
-}
-requestAnimationFrame(()=>requestAnimationFrame(()=>{alignQuantiserColumn();alignTransportButtons();}));
-window.addEventListener('resize',()=>{alignQuantiserColumn();alignTransportButtons();});
-
 // ═══════════════════════════════════════════════════════════
 // QUANTISER BUTTONS — piano layout
 // ═══════════════════════════════════════════════════════════
@@ -1688,6 +1645,8 @@ DRUMS.forEach(drum=>{
 // INIT
 // ═══════════════════════════════════════════════════════════
 initMidi();
+requestAnimationFrame(()=>requestAnimationFrame(alignQuantiserColumn));
+window.addEventListener('resize', alignQuantiserColumn);
 </script>
 </body>
 </html>
